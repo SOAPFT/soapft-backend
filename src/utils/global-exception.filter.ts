@@ -109,13 +109,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(
-        `Server Error: ${JSON.stringify(logMessage)}`,
+        logMessage,
         exception instanceof Error ? exception.stack : undefined,
       );
     } else if (status >= 400) {
-      this.logger.warn(`Client Error: ${JSON.stringify(logMessage)}`);
+      this.logger.warn(logMessage);
     } else {
-      this.logger.log(`Request: ${JSON.stringify(logMessage)}`);
+      this.logger.log(logMessage);
     }
   }
 }
