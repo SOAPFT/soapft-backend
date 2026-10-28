@@ -38,6 +38,8 @@ declare const module: any;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    // 앱 실행 로그를 버퍼에 저장하고 로거가 등록된 후 로거를 통해 출력한다
+    bufferLogs: true,
     logger:
       process.env.NODE_ENV === 'production'
         ? ['error', 'warn', 'log']
@@ -89,7 +91,9 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') ?? 7777;
   await app.listen(port);
-  console.log(`💧SOAPFT ${port}번 포트에서 실행중입니다.`);
+  app
+    .get(WINSTON_MODULE_NEST_PROVIDER)
+    .log(`💧SOAPFT ${port}번 포트에서 실행중입니다.`, 'Bootstrap');
 
   if (module.hot) {
     module.hot.accept();
