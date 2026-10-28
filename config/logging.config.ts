@@ -1,7 +1,19 @@
 import * as winston from 'winston';
-import { WinstonModuleOptions } from 'nest-winston';
+import {
+  WinstonModuleOptions,
+  utilities as nestWinstonModuleUtilities,
+} from 'nest-winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 import * as fs from 'fs';
+
+// ECS에서의 환경변수 설정
+const isEcs =
+  process.env.AWS_EXECUTION_ENV?.startsWith('AWS_ECS_') ||
+  Boolean(
+    process.env.ECS_CONTAINER_METADATA_URI_V4 ||
+      process.env.ECS_CONTAINER_METADATA_URI,
+  );
+const logFormat = process.env.LOG_FORMAT || (isEcs ? 'json' : 'text');
 
 // 로그 디렉토리 확인
 if (!fs.existsSync('logs')) {
@@ -28,13 +40,12 @@ export const winstonConfig: WinstonModuleOptions = {
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
         winston.format.splat(),
-        winston.format((info) => {
-          if (info.stack && typeof info.stack === 'string') {
-            info.stack = info.stack.replace(/\n+/g, ' | ');
-          }
-          return info;
-        })(),
-        winston.format.json(),
+        logFormat === 'json'
+          ? winston.format.json()
+          : nestWinstonModuleUtilities.format.nestLike('SOAPFT', {
+              prettyPrint: true,
+              colors: true,
+            }),
       ),
     }),
 
@@ -71,14 +82,11 @@ export const winstonConfig: WinstonModuleOptions = {
       options: fileOptions,
       auditFile: 'logs/http-audit.json',
       format: winston.format.combine(
+        winston.format((info) =>
+          info.context === 'HttpLogger' ? info : false,
+        )(),
         winston.format.timestamp(),
         winston.format.json(),
-        winston.format.printf((info) => {
-          if (info.context === 'HttpLogger') {
-            return JSON.stringify(info);
-          }
-          return null;
-        }),
       ),
     }),
   ],
